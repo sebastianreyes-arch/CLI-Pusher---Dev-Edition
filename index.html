@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLI Pusher - Dev Edition</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #050b05;
+      color: #00ff66;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 15px;
+      overflow: hidden;
+      text-shadow: 0 0 5px rgba(0, 255, 102, 0.6);
+    }
+
+    /* Visual CRT Overlay Effect */
+    body::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      gap: 15px;
+      height: calc(100% - 60px);
+    }
+
+    .panel {
+      border: 2px solid #00ff66;
+      border-radius: 4px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      background-color: rgba(0, 20, 0, 0.4);
+      box-shadow: inset 0 0 10px rgba(0, 255, 102, 0.2);
+    }
+
+    .left-panel {
+      flex: 1.2;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+      overflow-y: auto;
+    }
+
+    .right-panel {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .stats-header {
+      width: 100%;
+    }
+
+    .loc-counter {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .pps-counter {
+      font-size: 1rem;
+      opacity: 0.8;
+    }
+
+    /* Interactive Computer Button */
+    .pc-button {
+      background: transparent;
+      border: 1px dashed #00ff66;
+      color: #00ff66;
+      font-family: inherit;
+      padding: 10px;
+      cursor: pointer;
+      font-size: 0.65rem;
+      white-space: pre;
+      line-height: 1.1;
+      user-select: none;
+      transition: transform 0.05s, border-color 0.1s;
+      outline: none;
+      margin: 10px 0;
+    }
+
+    .pc-button:active {
+      transform: scale(0.96);
+      border-style: solid;
+      background-color: rgba(0, 255, 102, 0.1);
+    }
+
+    /* Workplace ASCII Visualizer */
+    .workplace-area {
+      width: 100%;
+      border-top: 1px dashed #00ff66;
+      padding-top: 10px;
+      margin-top: 5px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .workplace-title {
+      font-size: 0.8rem;
+      margin-bottom: 8px;
+      opacity: 0.8;
+    }
+
+    .workers-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .ascii-worker {
+      font-size: 0.55rem;
+      white-space: pre;
+      line-height: 1;
+      background: rgba(0, 255, 102, 0.05);
+      border: 1px solid rgba(0, 255, 102, 0.3);
+      padding: 4px;
+      border-radius: 3px;
+      animation: popIn 0.2s ease-out;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .instructions {
+      font-size: 0.75rem;
+      opacity: 0.7;
+      margin-top: 5px;
+    }
+
+    /* Terminal Console */
+    .console-logs {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-entry {
+      word-break: break-all;
+    }
+
+    .log-cmd { color: #88ff88; }
+    .log-error { color: #ff5555; }
+    .log-success { color: #ffff55; }
+
+    .command-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid #00ff66;
+      padding-top: 10px;
+      height: 45px;
+    }
+
+    .prompt-symbol {
+      font-weight: bold;
+    }
+
+    .cmd-input {
+      background: transparent;
+      border: none;
+      color: #00ff66;
+      font-family: inherit;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      text-shadow: inherit;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #050b05; }
+    ::-webkit-scrollbar-thumb { background: #00ff66; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+  <div class="main-container">
+    <!-- Left Section: Screen, Clicker & Visual Workers -->
+    <div class="panel left-panel">
+      <div class="stats-header">
+        <div class="loc-counter" id="loc-display">0 LOC</div>
+        <div class="pps-counter" id="pps-display">Rendimiento: 0.0 LOC/s</div>
+      </div>
+
+      <!-- ASCII Computer Trigger Button -->
+      <button class="pc-button" id="click-btn" tabindex="-1">
+ ___________________
+|  _________________  |
+| |                | |
+| |  >_ CODE NOW   | |
+| |________________| |
+|___________________|
+       \_____/
+    ____[____]____
+   /              \
+  /________________\
+      </button>
+
+      <!-- Area where hired Devs & AI tools appear -->
+      <div class="workplace-area">
+        <div class="workplace-title">--- EQUIPO & SERVIDORES ---</div>
+        <div class="workers-grid" id="workers-grid">
+          <!-- Worker ASCII elements dynamically inserted here -->
+        </div>
+      </div>
+
+      <div class="instructions">
+        [ESPACIO] o clic en la PC para programar.<br>
+        [TAB] para enfocar consola de comandos.
+      </div>
+    </div>
+
+    <!-- Right Section: Interactive Terminal Output -->
+    <div class="panel right-panel">
+      <div class="console-logs" id="console-output">
+        <div class="log-entry">CLI DEV-PUSHER v1.0 [Retro Terminal]</div>
+        <div class="log-entry">Escribe <span class="log-success">help</span> para ver la lista de comandos disponibles.</div>
+        <div class="log-entry">----------------------------------------------------</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Command Prompt Input -->
+  <div class="command-bar">
+    <span class="prompt-symbol">user@dev-terminal:~$</span>
+    <input type="text" id="cmd-input" class="cmd-input" placeholder="Escribe un comando..." autocomplete="off" spellcheck="false">
+  </div>
+
+  <script>
+    // --- ASCII ART FOR HIRED UNITS ---
+    const ASCII_ART = {
+      junior: 
+` (o_
+ /\\< [JR]
+_\\_v____`,
+      senior: 
+` (o_
+/|\\< [SR]
+_/_\\____`,
+      copilot: 
+` [COPILOT]
+ |==[]==|
+  \\____/ `,
+      chatgpt: 
+`  .----.
+ / AI-G  \\
+| [o]  [o]|
+ \\   --  /`,
+      agent: 
+` /======\\
+| AGENT  |
+| [SYS]  |
+ \\======/`
+    };
+
+    // --- STATE MANAGEMENT ---
+    let state = {
+      loc: 0, // Lines of Code (Currency)
+      locPerClick: 1,
+      items: {
+        junior: { id: 'junior', name: 'Junior Dev', cost: 15, pps: 0.5, count: 0 },
+        senior: { id: 'senior', name: 'Senior Dev', cost: 100, pps: 4, count: 0 },
+        copilot: { id: 'copilot', name: 'GitHub Copilot', cost: 1100, pps: 32, count: 0 },
+        chatgpt: { id: 'chatgpt', name: 'ChatGPT Plus', cost: 12000, pps: 260, count: 0 },
+        agent: { id: 'agent', name: 'Agente IA Autónomo', cost: 130000, pps: 1400, count: 0 }
+      }
+    };
+
+    // --- AUDIO SYSTEM (8-bit Web Audio API) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playBeep(freq = 440, type = 'square', duration = 0.05) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function soundClick() { playBeep(600, 'square', 0.04); }
+    function soundBuy() { playBeep(880, 'triangle', 0.1); setTimeout(() => playBeep(1200, 'triangle', 0.15), 50); }
+    function soundError() { playBeep(150, 'sawtooth', 0.15); }
+
+    // --- DOM ELEMENTS ---
+    const locDisplay = document.getElementById('loc-display');
+    const ppsDisplay = document.getElementById('pps-display');
+    const clickBtn = document.getElementById('click-btn');
+    const cmdInput = document.getElementById('cmd-input');
+    const consoleOutput = document.getElementById('console-output');
+    const workersGrid = document.getElementById('workers-grid');
+
+    // --- VISUAL RENDER LOGIC ---
+    function addWorkerToScreen(type) {
+      if (!ASCII_ART[type]) return;
+      const workerDiv = document.createElement('div');
+      workerDiv.className = 'ascii-worker';
+      workerDiv.textContent = ASCII_ART[type];
+      workersGrid.appendChild(workerDiv);
+      
+      // Auto-scroll screen down when new worker joins
+      const workplaceArea = document.querySelector('.workplace-area');
+      workplaceArea.scrollTop = workplaceArea.scrollHeight;
+    }
+
+    function rebuildWorkplaceScreen() {
+      workersGrid.innerHTML = '';
+      for (let key in state.items) {
+        const count = state.items[key].count;
+        for (let i = 0; i < count; i++) {
+          addWorkerToScreen(key);
+        }
+      }
+    }
+
+    // --- GAME LOGIC ---
+    function getPps() {
+      let total = 0;
+      for (let key in state.items) {
+        total += state.items[key].count * state.items[key].pps;
+      }
+      return total;
+    }
+
+    function addLOC(amount) {
+      state.loc += amount;
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      locDisplay.textContent = `${Math.floor(state.loc)} LOC`;
+      ppsDisplay.textContent = `Rendimiento: ${getPps().toFixed(1)} LOC/s`;
+    }
+
+    function pushCode() {
+      addLOC(state.locPerClick);
+      soundClick();
+    }
+
+    // Auto Loop (Idle engine - 10 ticks per sec)
+    setInterval(() => {
+      const pps = getPps();
+      if (pps > 0) {
+        addLOC(pps / 10);
+      }
+    }, 100);
+
+    // --- COMMAND SYSTEM ---
+    function printLog(text, className = '') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${className}`;
+      entry.innerHTML = text;
+      consoleOutput.appendChild(entry);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    function processCommand(cmdText) {
+      const clean = cmdText.trim().toLowerCase();
+      if (!clean) return;
+
+      printLog(`user@dev-terminal:~$ ${cmdText}`, 'log-cmd');
+      const parts = clean.split(' ');
+      const action = parts[0];
+      const target = parts[1];
+
+      switch (action) {
+        case 'help':
+          printLog('COMANDOS DISPONIBLES:');
+          printLog('  <span class="log-success">shop</span>             - Muestra ítems y precios.');
+          printLog('  <span class="log-success">buy &lt;id&gt;</span>         - Compra una mejora (ej. buy junior).');
+          printLog('  <span class="log-success">status</span>           - Estado del sistema y métricas.');
+          printLog('  <span class="log-success">save</span>             - Guarda y genera tu código de partida.');
+          printLog('  <span class="log-success">load &lt;código&gt;</span>   - Carga partida desde un código.');
+          printLog('  <span class="log-success">clear</span>            - Limpia la pantalla de consola.');
+          break;
+
+        case 'shop':
+          printLog('--- TIENDA DE RECURSOS ---');
+          for (let key in state.items) {
+            const item = state.items[key];
+            printLog(`[<span class="log-success">${item.id}</span>] ${item.name} | Costo: ${Math.floor(item.cost)} LOC | +${item.pps} LOC/s | Tienes: ${item.count}`);
+          }
+          break;
+
+        case 'buy':
+          if (!target) {
+            printLog('Especifica qué deseas comprar. Ejemplo: <span class="log-success">buy junior</span>', 'log-error');
+            soundError();
+            break;
+          }
+          const item = state.items[target];
+          if (!item) {
+            printLog(`El ítem '${target}' no existe. Revisa la 'shop'.`, 'log-error');
+            soundError();
+          } else if (state.loc < item.cost) {
+            printLog(`LOC insuficientes. Requieres ${Math.floor(item.cost)} LOC.`, 'log-error');
+            soundError();
+          } else {
+            state.loc -= item.cost;
+            item.count++;
+            item.cost = Math.floor(item.cost * 1.15); // Escalado de costo +15%
+            
+            // Add Visual ASCII Worker to screen
+            addWorkerToScreen(target);
+            
+            soundBuy();
+            printLog(`Comprado: ${item.name}. Nuevo costo: ${item.cost} LOC.`, 'log-success');
+            updateDisplay();
+          }
+          break;
+
+        case 'status':
+          printLog('--- ESTADO DE LA SESIÓN ---');
+          printLog(`LOC Acumuladas: ${Math.floor(state.loc)}`);
+          printLog(`Rendimiento Total: ${getPps().toFixed(1)} LOC/s`);
+          printLog(`Fuerza de Clic: ${state.locPerClick} LOC`);
+          break;
+
+        case 'save':
+          const jsonState = JSON.stringify(state);
+          const encodedSave = btoa(jsonState); // Codificación simple Base64
+          printLog('Partida guardada exitosamente.', 'log-success');
+          printLog(`TU CÓDIGO DE PARTIDA: <span class="log-success">${encodedSave}</span>`);
+          printLog('Copia este código para restaurar tu juego cuando quieras.');
+          break;
+
+        case 'load':
+          if (!target) {
+            printLog('Ingresa el código de guardado. Ejemplo: <span class="log-success">load eyJ...</span>', 'log-error');
+            soundError();
+            break;
+          }
+          try {
+            const decodedJson = atob(target);
+            const loadedState = JSON.parse(decodedJson);
+            if (loadedState && loadedState.items) {
+              state = loadedState;
+              updateDisplay();
+              rebuildWorkplaceScreen(); // Redraw loaded workers on screen
+              printLog('¡Partida cargada con éxito!', 'log-success');
+              soundBuy();
+            } else {
+              throw new Error();
+            }
+          } catch (e) {
+            printLog('Código de guardado inválido o corrupto.', 'log-error');
+            soundError();
+          }
+          break;
+
+        case 'clear':
+          consoleOutput.innerHTML = '';
+          break;
+
+        default:
+          printLog(`Comando no reconocido: '${action}'. Escribe <span class="log-success">help</span>.`, 'log-error');
+          soundError();
+          break;
+      }
+    }
+
+    // --- EVENT LISTENERS ---
+    clickBtn.addEventListener('click', pushCode);
+
+    // Press SPACE to push code, press TAB to switch focus to input
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && document.activeElement !== cmdInput) {
+        e.preventDefault();
+        clickBtn.classList.add('active');
+        pushCode();
+      } else if (e.code === 'Tab') {
+        e.preventDefault();
+        cmdInput.focus();
+      }
+    });
+
+    cmdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const val = cmdInput.value;
+        cmdInput.value = '';
+        processCommand(val);
+      }
+    });
+  </script>
+</body>
+</html>
