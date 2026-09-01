@@ -1,42 +1,3 @@
-  // --- ASCII ART FOR HIRED UNITS ---
-    const ASCII_ART = {
-      junior: 
-` (o_
- /\\< [JR]
-_\\_v____`,
-      senior: 
-` (o_
-/|\\< [SR]
-_/_\\____`,
-      copilot: 
-` [COPILOT]
- |==[]==|
-  \\____/ `,
-      chatgpt: 
-`  .----.
- / AI-G  \\
-| [o]  [o]|
- \\   --  /`,
-      agent: 
-` /======\\
-| AGENT  |
-| [SYS]  |
- \\======/`
-    };
-
-    // --- STATE MANAGEMENT ---
-    let state = {
-      loc: 0, // Lines of Code (Currency)
-      locPerClick: 1,
-      items: {
-        junior: { id: 'junior', name: 'Junior Dev', cost: 15, pps: 0.5, count: 0 },
-        senior: { id: 'senior', name: 'Senior Dev', cost: 100, pps: 4, count: 0 },
-        copilot: { id: 'copilot', name: 'GitHub Copilot', cost: 1100, pps: 32, count: 0 },
-        chatgpt: { id: 'chatgpt', name: 'ChatGPT Plus', cost: 12000, pps: 260, count: 0 },
-        agent: { id: 'agent', name: 'Agente IA Autónomo', cost: 130000, pps: 1400, count: 0 }
-      }
-    };
-
     // --- AUDIO SYSTEM (8-bit Web Audio API) ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -59,6 +20,8 @@ _/_\\____`,
       osc.start();
       osc.stop(audioCtx.currentTime + duration);
     }
+
+    let send_state = false;
 
     function soundClick() { playBeep(600, 'square', 0.04); }
     function soundBuy() { playBeep(880, 'triangle', 0.1); setTimeout(() => playBeep(1200, 'triangle', 0.15), 50); }
@@ -154,6 +117,12 @@ _/_\\____`,
           printLog('  <span class="log-success">save</span>             - Guarda y genera tu código de partida.');
           printLog('  <span class="log-success">load &lt;código&gt;</span>   - Carga partida desde un código.');
           printLog('  <span class="log-success">clear</span>            - Limpia la pantalla de consola.');
+          if (state.loc >= send_requeriment){
+            soundBuy()
+            printLog('  <span class="log-success">send</span>            - desplegar el proyecto (reduce tus loc pero aumenta tu recoleccion).')
+          }else {
+            break;
+          }
           break;
 
         case 'shop':
@@ -201,38 +170,72 @@ _/_\\____`,
         case 'save':
           const jsonState = JSON.stringify(state);
           const encodedSave = btoa(jsonState); // Codificación simple Base64
-          printLog('Partida guardada exitosamente.', 'log-success');
-          printLog(`TU CÓDIGO DE PARTIDA: <span class="log-success">${encodedSave}</span>`);
-          printLog('Copia este código para restaurar tu juego cuando quieras.');
+          printLog('<span class="log-success">esta funcion actualmente se encuentra en desarrollo</span>');
+          //printLog(`TU CÓDIGO DE PARTIDA: <span class="log-success">${encodedSave}</span>`);
+          //printLog('Copia este código para restaurar tu juego cuando quieras.');
           break;
 
         case 'load':
           if (!target) {
-            printLog('Ingresa el código de guardado. Ejemplo: <span class="log-success">load eyJ...</span>', 'log-error');
+            printLog('<span class="log-success">esta funcion actualmente esta en desarrollo</span>');
             soundError();
             break;
           }
-          try {
-            const decodedJson = atob(target);
-            const loadedState = JSON.parse(decodedJson);
-            if (loadedState && loadedState.items) {
-              state = loadedState;
-              updateDisplay();
-              rebuildWorkplaceScreen(); // Redraw loaded workers on screen
-              printLog('¡Partida cargada con éxito!', 'log-success');
-              soundBuy();
-            } else {
-              throw new Error();
-            }
-          } catch (e) {
-            printLog('Código de guardado inválido o corrupto.', 'log-error');
-            soundError();
-          }
-          break;
+          //try {
+            //const decodedJson = atob(target);
+            //const loadedState = JSON.parse(decodedJson);
+            //if (loadedState && loadedState.items) {
+              //state = loadedState;
+              //updateDisplay();
+              //rebuildWorkplaceScreen(); // Redraw loaded workers on screen
+              //printLog('¡Partida cargada con éxito!', 'log-success');
+              //soundBuy();
+            //} else {
+              //throw new Error();
+            //}
+          //} catch (e) {
+            //printLog('Código de guardado inválido o corrupto.', 'log-error');
+            //soundError();
+          //}
+          //break;
 
         case 'clear':
           consoleOutput.innerHTML = '';
           break;
+
+        case 'send':
+          if (state.loc < send_requeriment){
+            printLog(`Comando aun no disponible: '${action}'. Escribe <span class="log-success">help</span>.`, 'log-error');
+            break;
+          }else {
+            state.loc = 0;
+            state.locPerClick *= 10;
+            for (let key in state.items){
+              state.items[key].count = 0;
+            }
+            for (let key in state.items){
+              state.items[key].cost *= 5;
+            }
+            for (let key in state.items){
+              state.items[key].pps *= 5;
+            }
+            send_requeriment += 10000;
+            rebuildWorkplaceScreen();
+            updateDisplay();
+            soundBuy()
+            printLog('====================================================', 'log-success');
+            printLog('>>> ¡PROYECTO DESPLEGADO A PRODUCCIÓN CON ÉXITO! <<<', 'log-success');
+            printLog('Has completado la versión base del juego.', 'log-success');
+            printLog('Consigue la versión completa en itch.io para continuar.', 'log-success');
+            printLog('====================================================', 'log-success');
+            break;
+          }
+
+          //trucos dev
+          case 'qwerty':
+            printLog('<span class="log-success">truco activado</span>');
+            state.loc = state.loc + 1000000;
+            break;
 
         default:
           printLog(`Comando no reconocido: '${action}'. Escribe <span class="log-success">help</span>.`, 'log-error');
@@ -240,6 +243,12 @@ _/_\\____`,
           break;
       }
     }
+
+    // ACTIVAR COMANDO SEND
+    if (state.loc >= send_requeriment){
+          soundBuy()
+          printLog('  <span class="log-success">send</span>            - desplegar el proyecto (reduce tus loc pero aumenta tu recoleccion).', 'log-error')
+        }
 
     // --- EVENT LISTENERS ---
     clickBtn.addEventListener('click', pushCode);
