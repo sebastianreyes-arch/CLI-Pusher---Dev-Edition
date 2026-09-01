@@ -36,4 +36,4 @@ Sumérgete en la experiencia retro de administrar tu propia startup de desarroll
 
 🔗 Prueba la Versión Base Gratuita
 
-¿Quieres probar el bucle de juego antes de aportar? Prueba la versión demo web en vivo desde nuestro despliegue en Netlify: [Ver Demo](codetronix.netlify.app)
+¿Quieres probar el bucle de juego antes de aportar? Prueba la versión demo web en vivo desde nuestro despliegue en Netlify: codetronix.netlify.app
