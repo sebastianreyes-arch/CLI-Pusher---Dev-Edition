@@ -235,7 +235,9 @@
           case 'qwerty':
             printLog('<span class="log-success">truco activado</span>');
             state.loc = state.loc + 1000000;
+            updateDisplay();
             break;
+          
 
         default:
           printLog(`Comando no reconocido: '${action}'. Escribe <span class="log-success">help</span>.`, 'log-error');
