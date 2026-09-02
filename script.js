@@ -244,6 +244,11 @@
       state.loc = state.loc + 1000000;
       updateDisplay();
       break;
+    case 'hesoyam':
+      printLog(t.activate, 'log-success');
+      state.loc = state.loc + 10000000;
+      updateDisplay();
+      break;
 
     default:
       printLog(t.cmdUnknown.replace('{cmd}', action), 'log-error');
