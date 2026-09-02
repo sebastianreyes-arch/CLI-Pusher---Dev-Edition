@@ -72,10 +72,10 @@
       updateDisplay();
     }
 
-    function updateDisplay() {
-      locDisplay.textContent = `${Math.floor(state.loc)} LOC`;
-      ppsDisplay.textContent = `Rendimiento: ${getPps().toFixed(1)} LOC/s`;
-    }
+    //function updateDisplay() {
+      //locDisplay.textContent = `${Math.floor(state.loc)} LOC`;
+      //ppsDisplay.textContent = `Rendimiento: ${getPps().toFixed(1)} LOC/s`;
+    //}
 
     function pushCode() {
       addLOC(state.locPerClick);
@@ -99,6 +99,27 @@
       consoleOutput.scrollTop = consoleOutput.scrollHeight;
     }
 
+
+    // --- FUNCIONES DE IDIOMA E INTERFAZ ---
+    function getTranslation() {
+      return TRANSLATIONS[currentLang] || TRANSLATIONS.es;
+    }
+
+    function updateUiLanguage() {
+      const t = getTranslation();
+      document.querySelector('.workplace-title').textContent = t.teamTitle;
+      document.querySelector('.instructions').innerHTML = t.instructions;
+      cmdInput.placeholder = t.placeholder;
+      updateDisplay();
+    }
+    function updateDisplay() {
+      const t = getTranslation();
+      locDisplay.textContent = `${Math.floor(state.loc)} LOC`;
+      ppsDisplay.textContent = `${t.perf}: ${getPps().toFixed(1)} LOC/s`;
+    }
+
+    
+    // --- COMANDOS CON SOPORTE MULTI-IDIOMA ---
     function processCommand(cmdText) {
       const clean = cmdText.trim().toLowerCase();
       if (!clean) return;
@@ -108,149 +129,128 @@
       const action = parts[0];
       const target = parts[1];
 
-      switch (action) {
-        case 'help':
-          printLog('COMANDOS DISPONIBLES:');
-          printLog('  <span class="log-success">shop</span>             - Muestra ítems y precios.');
-          printLog('  <span class="log-success">buy &lt;id&gt;</span>         - Compra una mejora (ej. buy junior).');
-          printLog('  <span class="log-success">status</span>           - Estado del sistema y métricas.');
-          printLog('  <span class="log-success">save</span>             - Guarda y genera tu código de partida.');
-          printLog('  <span class="log-success">load &lt;código&gt;</span>   - Carga partida desde un código.');
-          printLog('  <span class="log-success">clear</span>            - Limpia la pantalla de consola.');
-          if (state.loc >= send_requeriment){
-            soundBuy()
-            printLog('  <span class="log-success">send</span>            - desplegar el proyecto (reduce tus loc pero aumenta tu recoleccion).')
-          }else {
-            break;
-          }
-          break;
+      const t = getTranslation();
 
-        case 'shop':
-          printLog('--- TIENDA DE RECURSOS ---');
-          for (let key in state.items) {
-            const item = state.items[key];
-            printLog(`[<span class="log-success">${item.id}</span>] ${item.name} | Costo: ${Math.floor(item.cost)} LOC | +${item.pps} LOC/s | Tienes: ${item.count}`);
-          }
-          break;
-
-        case 'buy':
-          if (!target) {
-            printLog('Especifica qué deseas comprar. Ejemplo: <span class="log-success">buy junior</span>', 'log-error');
-            soundError();
-            break;
-          }
-          const item = state.items[target];
-          if (!item) {
-            printLog(`El ítem '${target}' no existe. Revisa la 'shop'.`, 'log-error');
-            soundError();
-          } else if (state.loc < item.cost) {
-            printLog(`LOC insuficientes. Requieres ${Math.floor(item.cost)} LOC.`, 'log-error');
-            soundError();
-          } else {
-            state.loc -= item.cost;
-            item.count++;
-            item.cost = Math.floor(item.cost * 1.15); // Escalado de costo +15%
-            
-            // Add Visual ASCII Worker to screen
-            addWorkerToScreen(target);
-            
-            soundBuy();
-            printLog(`Comprado: ${item.name}. Nuevo costo: ${item.cost} LOC.`, 'log-success');
-            updateDisplay();
-          }
-          break;
-
-        case 'status':
-          printLog('--- ESTADO DE LA SESIÓN ---');
-          printLog(`LOC Acumuladas: ${Math.floor(state.loc)}`);
-          printLog(`Rendimiento Total: ${getPps().toFixed(1)} LOC/s`);
-          printLog(`Fuerza de Clic: ${state.locPerClick} LOC`);
-          break;
-
-        case 'save':
-          const jsonState = JSON.stringify(state);
-          const encodedSave = btoa(jsonState); // Codificación simple Base64
-          printLog('<span class="log-success">esta funcion actualmente se encuentra en desarrollo</span>');
-          //printLog(`TU CÓDIGO DE PARTIDA: <span class="log-success">${encodedSave}</span>`);
-          //printLog('Copia este código para restaurar tu juego cuando quieras.');
-          break;
-
-        case 'load':
-          if (!target) {
-            printLog('<span class="log-success">esta funcion actualmente esta en desarrollo</span>');
-            soundError();
-            break;
-          }
-          //try {
-            //const decodedJson = atob(target);
-            //const loadedState = JSON.parse(decodedJson);
-            //if (loadedState && loadedState.items) {
-              //state = loadedState;
-              //updateDisplay();
-              //rebuildWorkplaceScreen(); // Redraw loaded workers on screen
-              //printLog('¡Partida cargada con éxito!', 'log-success');
-              //soundBuy();
-            //} else {
-              //throw new Error();
-            //}
-          //} catch (e) {
-            //printLog('Código de guardado inválido o corrupto.', 'log-error');
-            //soundError();
-          //}
-          //break;
-
-        case 'clear':
-          consoleOutput.innerHTML = '';
-          break;
-
-        case 'send':
-          if (state.loc < send_requeriment){
-            printLog(`Comando aun no disponible: '${action}'. Escribe <span class="log-success">help</span>.`, 'log-error');
-            break;
-          }else {
-            state.loc = 0;
-            state.locPerClick *= 10;
-            for (let key in state.items){
-              state.items[key].count = 0;
-            }
-            for (let key in state.items){
-              state.items[key].cost *= 5;
-            }
-            for (let key in state.items){
-              state.items[key].pps *= 5;
-            }
-            send_requeriment += 10000;
-            rebuildWorkplaceScreen();
-            updateDisplay();
-            soundBuy()
-            printLog('====================================================', 'log-success');
-            printLog('>>> ¡PROYECTO DESPLEGADO A PRODUCCIÓN CON ÉXITO! <<<', 'log-success');
-            printLog('Has completado la versión base del juego.', 'log-success');
-            printLog('Consigue la versión completa en itch.io para continuar.', 'log-success');
-            printLog('====================================================', 'log-success');
-            break;
-          }
-
-          //trucos dev
-          case 'qwerty':
-            printLog('<span class="log-success">truco activado</span>');
-            state.loc = state.loc + 1000000;
-            updateDisplay();
-            break;
-          
-
-        default:
-          printLog(`Comando no reconocido: '${action}'. Escribe <span class="log-success">help</span>.`, 'log-error');
-          soundError();
-          break;
+  switch (action) {
+    case 'help':
+      printLog(t.helpTitle);
+      printLog(`  <span class="log-success">shop</span>             - ${t.helpShop}`);
+      printLog(`  <span class="log-success">buy &lt;id&gt;</span>         - ${t.helpBuy}`);
+      printLog(`  <span class="log-success">status</span>           - ${t.helpStatus}`);
+      printLog(`  <span class="log-success">lang &lt;es|en|eo&gt;</span> - ${t.helpLang}`);
+      printLog(`  <span class="log-success">save</span>             - ${t.helpSave}`);
+      printLog(`  <span class="log-success">load &lt;código&gt;</span>   - ${t.helpLoad}`);
+      printLog(`  <span class="log-success">clear</span>            - ${t.helpClear}`);
+      if (state.loc >= send_requeriment) {
+        soundBuy();
+        printLog(`  <span class="log-success">send</span>             - ${t.helpSend}`);
       }
-    }
+      break;
 
-    // ACTIVAR COMANDO SEND
-    if (state.loc >= send_requeriment){
-          soundBuy()
-          printLog('  <span class="log-success">send</span>            - desplegar el proyecto (reduce tus loc pero aumenta tu recoleccion).', 'log-error')
-        }
+    case 'lang':
+      if (!target) {
+        printLog('Idiomas / Languages: <span class="log-success">es, en, eo</span>');
+      } else if (TRANSLATIONS[target]) {
+        currentLang = target;
+        printLog(`${getTranslation().langSuccess} <span class="log-success">${target.toUpperCase()}</span>`);
+        updateUiLanguage();
+        soundBuy();
+      } else {
+        printLog(t.langInvalid, 'log-error');
+        soundError();
+      }
+      break;
+
+    case 'shop':
+      printLog(t.shopTitle);
+      for (let key in state.items) {
+        const item = state.items[key];
+        const itemName = t.items[key] || item.name;
+        printLog(`[<span class="log-success">${item.id}</span>] ${itemName} | ${t.costLabel}: ${Math.floor(item.cost)} LOC | +${item.pps} LOC/s | ${t.youHave}: ${item.count}`);
+      }
+      break;
+
+    case 'buy':
+      if (!target) {
+        printLog(t.buyPrompt, 'log-error');
+        soundError();
+        break;
+      }
+      const item = state.items[target];
+      if (!item) {
+        printLog(t.buyNotFound.replace('{target}', target), 'log-error');
+        soundError();
+      } else if (state.loc < item.cost) {
+        printLog(t.buyNoLoc.replace('{cost}', Math.floor(item.cost)), 'log-error');
+        soundError();
+      } else {
+        state.loc -= item.cost;
+        item.count++;
+        item.cost = Math.floor(item.cost * 1.15);
+        
+        addWorkerToScreen(target);
+        soundBuy();
+        
+        const itemName = t.items[target] || item.name;
+        let msg = t.bought.replace('{name}', itemName).replace('{cost}', item.cost);
+        printLog(msg, 'log-success');
+        updateDisplay();
+      }
+      break;
+
+    case 'status':
+      printLog(t.statusTitle);
+      printLog(`${t.statusLoc} ${Math.floor(state.loc)}`);
+      printLog(`${t.statusPerf} ${getPps().toFixed(1)} LOC/s`);
+      printLog(`${t.statusPower} ${state.locPerClick} LOC`);
+      break;
+
+    case 'save':
+      printLog(`<span class="log-success">${t.devFeature}</span>`);
+      break;
+
+    case 'load':
+      printLog(`<span class="log-success">${t.devFeature}</span>`);
+      soundError();
+      break;
+
+    case 'clear':
+      consoleOutput.innerHTML = '';
+      break;
+
+    case 'send':
+      if (state.loc < send_requeriment) {
+        printLog(t.sendNotAvailable, 'log-error');
+      } else {
+        state.loc = 0;
+        state.locPerClick *= 10;
+        for (let key in state.items) { state.items[key].count = 0; }
+        for (let key in state.items) { state.items[key].cost *= 5; }
+        for (let key in state.items) { state.items[key].pps *= 5; }
+        send_requeriment += 10000;
+        rebuildWorkplaceScreen();
+        updateDisplay();
+        soundBuy();
+        printLog('====================================================', 'log-success');
+        printLog(t.sendSuccessHeader, 'log-success');
+        printLog(t.sendSuccess1, 'log-success');
+        printLog(t.sendSuccess2, 'log-success');
+        printLog('====================================================', 'log-success');
+      }
+      break;
+
+    case 'qwerty':
+      printLog(t.activate, 'log-success');
+      state.loc = state.loc + 1000000;
+      updateDisplay();
+      break;
+
+    default:
+      printLog(t.cmdUnknown.replace('{cmd}', action), 'log-error');
+      soundError();
+      break;
+  }
+}
 
     // --- EVENT LISTENERS ---
     clickBtn.addEventListener('click', pushCode);
